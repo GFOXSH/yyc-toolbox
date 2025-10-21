@@ -225,10 +225,9 @@ L::Stream_t& L::Stream_t::operator<<(const wchar_t* wszMessage)
 	return *this;
 }
 
-L::Stream_t & L::Stream_t::operator<<(const std::string bValue)
+L::Stream_t & L::Stream_t::operator<<(const std::string strValue)
 {
-	const char* szMessage = bValue.c_str();
-	WriteMessage(szMessage, CRT::StringLength(szMessage));
+	WriteMessage(strValue.data(), strValue.size());
 	return *this;
 }
 

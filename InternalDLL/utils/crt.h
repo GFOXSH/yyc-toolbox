@@ -199,7 +199,7 @@ namespace CRT
 	}
 	[[nodiscard]] __forceinline std::string LongToHexString(std::uint64_t in) {
 		std::stringstream stream;
-		stream << std::hex << in;
+		stream << std::uppercase << std::hex << in;
 		std::string result("0x" + stream.str());
 		return result;
 	}

@@ -187,7 +187,7 @@ namespace L
 		Stream_t& operator<<(const char* szMessage);
 		Stream_t& operator<<(const wchar_t* wszMessage);
 		// conversion
-		Stream_t& operator<<(const std::string bValue);
+		Stream_t& operator<<(const std::string strValue);
 		Stream_t& operator<<(const bool bValue);
 
 		template <typename T> requires std::is_integral_v<T>

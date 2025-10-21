@@ -113,7 +113,7 @@ void* MEM::GetModuleBaseHandle(const char* szModuleName) {
     char moduleName[MAX_PATH]{};
     if (!szModuleName) {
         TCHAR szFileName[MAX_PATH];
-        GetModuleFileName(NULL, szFileName, MAX_PATH);
+        GetModuleFileNameW(NULL, szFileName, MAX_PATH);
         wcstombs(moduleName, szFileName, MAX_PATH);
         std::filesystem::path p(moduleName);
         strcpy(moduleName, p.filename().string().c_str());
