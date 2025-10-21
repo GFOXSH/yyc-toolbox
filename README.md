@@ -6,7 +6,9 @@ Basically a YYC mod tool. This is very much a WIP and will take some time to fin
 
 ## Feature/plans list
 
-<table><tbody><tr><td><p>Feature</p></td><td><p>Status</p></td></tr><tr><td><p>Object editor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Code editor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Code decompiler</p></td><td><p>❓ Partially implemented</p></td></tr><tr><td><p>Code executor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Resource browser</p></td><td><p>❓ Partially implemented</p></td></tr><tr><td><p>Font support</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Patch generation</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Code patching</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Room editing</p></td><td><p>❌Planned</p></td></tr></tbody></table>
+<table><tbody><tr><td><p>Feature</p></td><td><p>Status</p></td></tr><tr><td><p>Object editor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Code editor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Code decompiler</p></td><td><p>❌ Removed temporarily</p></td></tr><tr><td><p>Code executor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Resource browser</p></td><td><p>❓ Partially implemented</p></td></tr><tr><td><p>Font support</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Patch generation</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Code patching</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Room editing</p></td><td><p>❌Planned</p></td></tr></tbody></table>
+
+Code decompiler was removed due to ethical concerns from 1. GM datamining community 2. GM developer community.
 
 For any potentially unimplemented features that you may need right now, we recommend you check out [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool), or [UnderAnalyzer](https://github.com/UnderminersTeam/Underanalyzer).
 
