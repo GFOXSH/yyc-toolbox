@@ -79,12 +79,10 @@
     <ClCompile Include="utils\GMLParser.cpp">
       <Filter>utils</Filter>
     </ClCompile>
-    <ClCompile Include="utils\code\decompiler.cpp">
-      <Filter>utils\code</Filter>
-    </ClCompile>
     <ClCompile Include="utils\RemoteAPI.cpp">
       <Filter>utils</Filter>
     </ClCompile>
+    <ClCompile Include="utils\code\decompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Drawing.h" />

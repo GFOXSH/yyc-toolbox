@@ -1373,8 +1373,9 @@ obj->m_ID);
 		{
 			if (ImGui::Button("Close##CodeViewer"))
 				openedManagers &= ~MANAGERS_CODE;
-			static bool send_dis = false;
-			static HANDLE decompThread = nullptr;
+			static bool bSendDisasm = false;
+			static HANDLE hDecompThread = nullptr;
+			static HANDLE hTranspileThread = nullptr;
 			if (ImGui::BeginTabBar("##codeviewer_tabs")) {
 				if (ImGui::BeginTabItem("Decompilation##code_viewer"))
 				{
@@ -1396,35 +1397,41 @@ obj->m_ID);
 							currentDisasm += asm_inst + "\t ; " + result + '\n';
 							currentCode += "__asm " + asm_inst + " // " + result + '\n';
 						}
-						if (send_dis) {
+						if (bSendDisasm) {
 							currentCode = "// Decompilation START!\n";
 							void** threadInfo = new void* [2] {
 								reinterpret_cast<void*>(vars->pGMLFuncs[rCode.selection.id].pFunc),
 								reinterpret_cast<void*>(&currentCode)
 							};
-							decompThread = ::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)REMOTE::DecompileFn, threadInfo, NULL, NULL);
-							if (YY_ISINVALIDPTR(decompThread))
+							hDecompThread = ::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)REMOTE::DecompileFn, threadInfo, NULL, NULL);
+							if (YY_ISINVALIDPTR(hDecompThread))
 								ImGui::InsertNotification({ ImGuiToastType::Error, "Failed to create a new thread. Thread handle given by ::CreateThread is invalid." });
 						}
 
 						DecompilerInput* input = new DecompilerInput();
 						input->pName = vars->pGMLFuncs[rCode.selection.id].pName;
 						input->pFunc = func;
+						input->nFlags |= DecompilerFlags::FLAGS_ACCURACY;
 						DecompilerResult* result = DECOMPILER::DecompileFn(input); // TODO: Make this multi-threaded, or optimize and make it faster
 						if (result->bSuccess)
 						{
 							currentTranspiled = std::format(R"(// Lines of code: {}
 // {}
-{})", result->nLines, result->pStatus == nullptr ? "No additional information available." : result->pStatus, result->pCode);
+function {}() {{
+{}
+}})", result->nLines, YY_ISINVALIDPTR(result->pStatus) ? "No additional information available." : result->pStatus, input->pName, result->strCode);
 						} else
 							ImGui::InsertNotification({ ImGuiToastType::Error, "Failed to transpile machine to GML code. Check the debug console for more information." });
+						
+						delete input;
+						delete result;
 					}
-					if (decompThread) {
-						DWORD waitResult = WaitForSingleObject(decompThread, 0);
+					if (hDecompThread) {
+						DWORD waitResult = WaitForSingleObject(hDecompThread, 0);
 						switch (waitResult) {
 						case WAIT_OBJECT_0:
-							CloseHandle(decompThread);
-							decompThread = nullptr;
+							CloseHandle(hDecompThread);
+							hDecompThread = nullptr;
 							ImGui::InsertNotification({ ImGuiToastType::Success, "Decompilation finished." });
 							break;
 						case WAIT_TIMEOUT:
@@ -1435,8 +1442,8 @@ obj->m_ID);
 							ImGui::End();
 							break;
 						default:
-							CloseHandle(decompThread);
-							decompThread = nullptr;
+							CloseHandle(hDecompThread);
+							hDecompThread = nullptr;
 							ImGui::InsertNotification({ ImGuiToastType::Error });
 							break;
 						}
@@ -1467,7 +1474,7 @@ obj->m_ID);
 					ImGui::Text("where it will be properly decompiled into c++ and sent back for display/transpiling.");
 					ImGui::Text("by checking the box below, you acknowledge that the disassembly, including the");
 					ImGui::Text("decompiled code, may be viewed by a third party.*");
-					ImGui::Checkbox("Send the disassembly to remote server for decompilation", &send_dis);
+					ImGui::Checkbox("Send the disassembly to remote server for decompilation", &bSendDisasm);
 					ImGui::Text("* I keep no logs. By third party, in a really edge case, law enforcement is implied.");
 
 					ImGui::EndTabItem();
