@@ -13,6 +13,8 @@ jobs:
           C:\vcpkg\bootstrap-vcpkg.bat
           C:\vcpkg\vcpkg integrate install
           C:\vcpkg\vcpkg install lua:x64-windows
+      - name: List vcpkg lib (debug)
+        run: dir C:\vcpkg\installed\x64-windows\lib
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
       - name: Build
