@@ -1,0 +1,46 @@
+name: Build 32-bit Library
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Позволяет запускать сборку вручную во вкладке "Actions"
+
+jobs:
+  build:
+    name: Build MSBuild 32-bit
+    # Для сборки Visual Studio проектов используем Windows-окружение
+    runs-on: windows-latest 
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # (Опционально) Если вы используете NuGet для управления зависимостями
+    # Раскомментируйте следующие два шага:
+    # - name: Setup NuGet
+    #   uses: NuGet/setup-nuget@v2
+    #
+    # - name: Restore NuGet packages
+    #   run: nuget restore InternalDLL.sln
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x86
+
+    - name: Build the solution
+      # В проектах C++ 32-битная архитектура традиционно называется Win32.
+      # Если ваша Visual Studio настроена на x86, замените Win32 на x86.
+      run: msbuild InternalDLL.sln /p:Configuration=Release /p:Platform=Win32
+
+    - name: Upload compiled DLL
+      uses: actions/upload-artifact@v4
+      with:
+        name: YYC-Toolbox-x86
+        # Ищем готовую DLL в папках Release. Укажите точный путь, если он отличается.
+        path: |
+          Release/*.dll
+          */Release/*.dll
+          **/Release/*.dll
