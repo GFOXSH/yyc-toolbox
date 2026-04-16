@@ -1,0 +1,7 @@
+{
+  "name": "yyc-toolbox",
+  "version": "0.1.0",
+  "dependencies": [
+    "lua5.3"
+  ]
+}
