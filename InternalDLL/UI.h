@@ -68,11 +68,9 @@ public:
 		int id = -1;
 	};
 
-	struct Resource
-	{
-		std::string search;
-		std::vector<UI::ResourceItem> list;
-		UI::ResourceItem selection;
+	struct CodeItem {
+		std::string name;
+		int idx = -1;
 	};
 
 	static void Render();

@@ -24,7 +24,7 @@ bool UI::CreateDeviceD3D()
     SetLastError(0);
     pOldWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(hCurrentWindow, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc)));
     DWORD error = GetLastError();
-    if (YY_ISINVALIDPTR(pOldWndProc) && error != 0) {
+    if (pOldWndProc == nullptr && error != 0) {
         MessageBoxA(NULL, "Failed to hook WndProc. Aborting.", "YYC Toolbox", MB_ICONERROR | MB_OK);
         L_PRINT(LOG_ERROR) << "Failed to hook WndProc";
         return false;
@@ -261,7 +261,8 @@ void UI::Render()
 {
     ImGui_ImplWin32_EnableDpiAwareness();
 
-    if (YY_ISINVALIDPTR(hCurrentWindow))
+    // Get the main window of the process when overlay as DLL
+    if (hCurrentWindow == nullptr)
         EnumWindows(EnumWind, reinterpret_cast<LPARAM>(&hCurrentWindow));
 
     if (!CreateDeviceD3D())
@@ -320,7 +321,7 @@ BOOL CALLBACK UI::EnumWind(HWND hWindow, LPARAM lParam)
 {
     const auto MainWindow = [hWindow]()
         {
-            return YY_ISINVALIDPTR(GetWindow(hWindow, GW_OWNER)) &&
+            return GetWindow(hWindow, GW_OWNER) == nullptr &&
                 IsWindowVisible(hWindow) && hWindow != GetConsoleWindow();
         };
 

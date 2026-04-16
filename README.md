@@ -2,19 +2,17 @@
 
 [![Join the Valkyrians discord server](https://img.shields.io/discord/1236119944714780672?label=Discord&logo=discord&logoColor=white)](https://discord.gg/FRgGkgUhRK)
 
-Basically a YYC mod tool. This is very much a WIP and will take some time to finish.
+Basically a YYC mod tool. This is very much a WIP and will take some time to finish. As such, no releases will be built for now. It is only when it's fully finished for release that I will upload the loader.
 
 ## Feature/plans list
 
-<table><tbody><tr><td><p>Feature</p></td><td><p>Status</p></td></tr><tr><td><p>Object editor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Code editor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Code decompiler</p></td><td><p>❌ Removed temporarily</p></td></tr><tr><td><p>Code executor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Resource browser</p></td><td><p>❓ Partially implemented</p></td></tr><tr><td><p>Font support</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Patch generation</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Code patching</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Room editing</p></td><td><p>❌Planned</p></td></tr></tbody></table>
-
-Code decompiler was removed due to ethical concerns from 1. GM datamining community 2. GM developer community.
+<table><tbody><tr><td><p>Feature</p></td><td><p>Status</p></td></tr><tr><td><p>Object editor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Code editor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Code decompiler</p></td><td><p>❓ Partially implemented</p></td></tr><tr><td><p>Code executor</p></td><td><p>✅ Implemented</p></td></tr><tr><td><p>Resource browser</p></td><td><p>❓ Partially implemented</p></td></tr><tr><td><p>Font support</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Patch generation</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Code patching</p></td><td><p>❌Planned</p></td></tr><tr><td><p>Room editing</p></td><td><p>❌Planned</p></td></tr></tbody></table>
 
 For any potentially unimplemented features that you may need right now, we recommend you check out [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool), or [UnderAnalyzer](https://github.com/UnderminersTeam/Underanalyzer).
 
 ## Installation
 
-Download the DLL from Releases and inject it using your injector of choice.
+As stated above, there's no releases yet. You'll either have to compile this on your own, or wait until I make a release. PRs to speed up the process are welcome. Feature suggestions are welcome. This repository is only meant for tracking changes for now.
 
 ## FAQ
 
@@ -26,7 +24,7 @@ YYC Toolbox works by injecting itself into the game and accessing the internal R
 
 A half-baked Lua API with a documentation we barely update? [Coming right up!](https://docs.x64dbg.ru/home)
 
-### When do you plan on finishing YYC Toolbox?
+### When do you plan on releasing YYC Toolbox?
 
 Deadline's Q4 2025. May be pushed back to Q1 2026. Tough to say for sure.
 

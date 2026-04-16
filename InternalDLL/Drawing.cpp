@@ -9,7 +9,6 @@
 #include <format>
 #include <iomanip>
 #include "utils/api.h"
-#include "utils/code/decompiler.h"
 
 LPCSTR Drawing::lpWindowName = "YYC Toolbox";
 ImVec2 Drawing::vWindowSize = { 350, 200 };
@@ -21,29 +20,51 @@ UI::WindowItem Drawing::lpSelectedWindow = { nullptr, "", "" };
 bool RunAsSelectedObj = false;
 bool isCodeLua = false;
 
-UI::Resource rCurve;
-UI::Resource rFont;
-UI::Resource rObject;
+bool codeViewerOpen = false;
+
+std::string curveSearch;
+std::vector<UI::ResourceItem> CurveList{};
+UI::ResourceItem selectedCurve;
+
+std::string fontSearch;
+std::vector<UI::ResourceItem> FontList{};
+UI::ResourceItem selectedFont;
+
+std::string objSearch;
+std::vector<UI::ResourceItem> ObjectList{};
+UI::ResourceItem selectedObj;
 
 std::string ObjectVariableSearch;
 std::vector<std::string> ObjectVariables{};
 std::string SelectedVariable;
 std::string SelectedVariableValue;
 
-UI::Resource rPSystem;
-UI::Resource rPath;
-UI::Resource rRoom;
-UI::Resource rScript;
+std::string pSysSearch;
+std::vector<UI::ResourceItem> PSysList{};
+UI::ResourceItem selectedPSys;
+
+std::string pathSearch;
+std::vector<UI::ResourceItem> PathList{};
+UI::ResourceItem selectedPath;
+
+std::string roomSearch;
+std::vector<UI::ResourceItem> RoomList{};
+UI::ResourceItem selectedRoom;
+
+std::string scriptSearch;
+std::vector<UI::ResourceItem> ScriptList{};
+UI::ResourceItem selectedScript;
 
 std::string g_VarSearch;
 std::vector<std::string> g_Variables{};
 std::string Selectedg_Variable;
 std::string Selectedg_VarValue;
 
-UI::Resource rCode;
+std::string codeSearch;
+std::vector<UI::CodeItem> codeList{};
+UI::CodeItem selectedCode;
 std::string currentDisasm;
 std::string currentCode;
-std::string currentTranspiled;
 
 std::string executorCode;
 
@@ -65,8 +86,7 @@ enum EOpenedManagers : OpenedManagers_t
 	MANAGERS_SOUNDS		= 1 << 11,
 	MANAGERS_SPRITES	= 1 << 12,
 	MANAGERS_TILESETS	= 1 << 13,
-	MANAGERS_TIMELINES	= 1 << 14,
-	MANAGERS_CODE		= 1 << 15
+	MANAGERS_TIMELINES	= 1 << 14
 };
 OpenedManagers_t openedManagers = MANAGERS_NONE;
 
@@ -162,7 +182,7 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 	static bool RunOnDraw = false;
 	if (RunOnDraw)
 	{	// b1g zalupa
-		(isCodeLua ? API::ExecuteCode : PARSER::ExecuteCode)(executorCode, RunAsSelectedObj ? rObject.selection.id : -1);
+		(isCodeLua ? API::ExecuteCode : PARSER::ExecuteCode)(executorCode, RunAsSelectedObj ? selectedObj.id : -1);
 		if (bErrorOccurred)
 			bErrorOccurred = RunOnDraw = false;
 	}
@@ -782,11 +802,11 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 				ImGui::InputTextMultiline("##executor", &executorCode);
 				ImGui::SameLine();
 				ImGui::Checkbox("Is Lua?##executor", &isCodeLua);
-				if ((rObject.selection.id < 0 || isCodeLua) && RunAsSelectedObj)
+				if ((selectedObj.id < 0 || isCodeLua) && RunAsSelectedObj)
 					RunAsSelectedObj = false;
 
 				if (ImGui::Button("Execute")) // b1g zalupa
-					(isCodeLua ? API::ExecuteCode : PARSER::ExecuteCode)(executorCode, RunAsSelectedObj ? rObject.selection.id : -1);
+					(isCodeLua ? API::ExecuteCode : PARSER::ExecuteCode)(executorCode, RunAsSelectedObj ? selectedObj.id : -1);
 
 				ImGui::SameLine();
 				ImGui::Checkbox("Run every draw event", &RunOnDraw);
@@ -816,21 +836,21 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 						manager->children = newArray;
 						ImGui::InsertNotification({ ImGuiToastType::Success });
 						// Force a refresh to display the new member
-						API::GetCurveList(&rCurve.list);
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetCurveList, &CurveList, NULL, NULL);
 					}
 					ImGui::SameLine();
 					if (ImGui::Button("Edit##animationCurves"))
 						openedManagers |= MANAGERS_CURVES;
 					ImGui::SameLine();
 					if (ImGui::Button("Refresh##animationCurves"))
-						API::GetCurveList(&rCurve.list);
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetCurveList, &CurveList, NULL, NULL);
 					ImGui::SameLine();
-					ImGui::InputText("Search##animationCurves", &rCurve.search);
-					for (auto& resource : rCurve.list) {
+					ImGui::InputText("Search##animationCurves", &curveSearch);
+					for (auto& resource : CurveList) {
 						std::string name(resource.name);
-						if (rCurve.search.empty() || CRT::FindSubstring(name, rCurve.search))
-							if (ImGui::Selectable(resource.name, rCurve.selection.id == resource.id))
-								rCurve.selection = resource;
+						if (curveSearch.empty() || CRT::FindSubstring(name, curveSearch))
+							if (ImGui::Selectable(resource.name, selectedCurve.id == resource.id))
+								selectedCurve = resource;
 					}
 				}
 				/* Fonts */
@@ -844,14 +864,20 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 					}
 					ImGui::SameLine();
 					if (ImGui::Button("Refresh##fonts"))
-						API::GetResourceList(&rFont.list, eAssetType::ASSET_FONT);
+					{
+						void** threadInfo = new void* [2] {
+							reinterpret_cast<void*>(&FontList),
+								reinterpret_cast<void*>(new int(eAssetType::ASSET_FONT))
+							};
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetResourceListAsync, threadInfo, NULL, NULL);
+					}
 					ImGui::SameLine();
-					ImGui::InputText("Search##fonts", &rFont.search);
-					for (auto& resource : rFont.list) {
+					ImGui::InputText("Search##fonts", &fontSearch);
+					for (auto& resource : FontList) {
 						std::string name(resource.name);
-						if (rFont.search.empty() || CRT::FindSubstring(name, rFont.search))
-							if (ImGui::Selectable(resource.name, rFont.selection.id == resource.id))
-								rFont.selection = resource;
+						if (fontSearch.empty() || CRT::FindSubstring(name, fontSearch))
+							if (ImGui::Selectable(resource.name, selectedFont.id == resource.id))
+								selectedFont = resource;
 					}
 				}
 				/* Objects */
@@ -860,8 +886,8 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 						HashNode<CObjectGM>* obj = API::CreateObject(CRT::RandomString(8).c_str());
 						if (obj && obj->m_pObj)
 						{
-							rObject.selection.id = obj->m_pObj->m_ID;
-							API::GetObjectList(&rObject.list);
+							selectedObj.id = obj->m_pObj->m_ID;
+							::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetObjectList, &ObjectList, NULL, NULL);
 							ImGui::InsertNotification({ ImGuiToastType::Success });
 						}
 						else
@@ -872,14 +898,14 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 						openedManagers |= MANAGERS_OBJECTS;
 					ImGui::SameLine();
 					if (ImGui::Button("Refresh##objects"))
-						API::GetObjectList(&rObject.list);
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetObjectList, &ObjectList, NULL, NULL);
 					ImGui::SameLine();
-					ImGui::InputText("Search##objects", &rObject.search);
-					for (auto& resource : rObject.list) {
+					ImGui::InputText("Search##objects", &objSearch);
+					for (auto& resource : ObjectList) {
 						std::string name(resource.name);
-						if (rObject.search.empty() || CRT::FindSubstring(name, rObject.search))
-							if (ImGui::Selectable(resource.name, rObject.selection.id == resource.id))
-								rObject.selection = resource;
+						if (objSearch.empty() || CRT::FindSubstring(name, objSearch))
+							if (ImGui::Selectable(resource.name, selectedObj.id == resource.id))
+								selectedObj = resource;
 					}
 				}
 				/* Particle Systems */
@@ -893,14 +919,20 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 					}
 					ImGui::SameLine();
 					if (ImGui::Button("Refresh##psystems"))
-						API::GetResourceList(&rPSystem.list, eAssetType::ASSET_PARTICLE);
+					{
+						void** threadInfo = new void* [2] {
+							reinterpret_cast<void*>(&PSysList),
+							reinterpret_cast<void*>(new int(eAssetType::ASSET_PARTICLE))
+						};
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetResourceListAsync, threadInfo, NULL, NULL);
+					}
 					ImGui::SameLine();
-					ImGui::InputText("Search##psystems", &rPSystem.search);
-					for (auto& resource : rPSystem.list) {
+					ImGui::InputText("Search##psystems", &pSysSearch);
+					for (auto& resource : PSysList) {
 						std::string name(resource.name);
-						if (rPSystem.search.empty() || CRT::FindSubstring(name, rPSystem.search))
-							if (ImGui::Selectable(resource.name, rPSystem.selection.id == resource.id))
-								rPSystem.selection = resource;
+						if (pSysSearch.empty() || CRT::FindSubstring(name, pSysSearch))
+							if (ImGui::Selectable(resource.name, selectedPSys.id == resource.id))
+								selectedPSys = resource;
 					}
 				}
 				/* Paths */
@@ -929,21 +961,21 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 						manager->names = newNameArray;
 						ImGui::InsertNotification({ ImGuiToastType::Success });
 						// Force a refresh to display the new member
-						API::GetPathList(&rPath.list);
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetPathList, &PathList, NULL, NULL);
 					}
 					ImGui::SameLine();
 					if (ImGui::Button("Edit##paths"))
 						openedManagers |= MANAGERS_PATHS;
 					ImGui::SameLine();
 					if (ImGui::Button("Refresh##paths"))
-						API::GetPathList(&rPath.list);
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetPathList, &PathList, NULL, NULL);
 					ImGui::SameLine();
-					ImGui::InputText("Search##paths", &rPath.search);
-					for (auto& resource : rPath.list) {
+					ImGui::InputText("Search##paths", &pathSearch);
+					for (auto& resource : PathList) {
 						std::string name(resource.name);
-						if (rPath.search.empty() || CRT::FindSubstring(name, rPath.search))
-							if (ImGui::Selectable(resource.name, rPath.selection.id == resource.id))
-								rPath.selection = resource;
+						if (pathSearch.empty() || CRT::FindSubstring(name, pathSearch))
+							if (ImGui::Selectable(resource.name, selectedPath.id == resource.id))
+								selectedPath = resource;
 					}
 				}
 				/* Rooms */
@@ -955,14 +987,20 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 						openedManagers |= MANAGERS_ROOMS;
 					ImGui::SameLine();
 					if (ImGui::Button("Refresh##rooms"))
-						API::GetResourceList(&rRoom.list, eAssetType::ASSET_ROOM);
+					{
+						void** threadInfo = new void* [2] {
+							reinterpret_cast<void*>(&RoomList),
+								reinterpret_cast<void*>(new int(eAssetType::ASSET_ROOM))
+							};
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetResourceListAsync, threadInfo, NULL, NULL);
+					}
 					ImGui::SameLine();
-					ImGui::InputText("Search##rooms", &rRoom.search);
-					for (auto& resource : rRoom.list) {
+					ImGui::InputText("Search##rooms", &roomSearch);
+					for (auto& resource : RoomList) {
 						std::string name(resource.name);
-						if (rRoom.search.empty() || CRT::FindSubstring(name, rRoom.search))
-							if (ImGui::Selectable(resource.name, rRoom.selection.id == resource.id))
-								rRoom.selection = resource;
+						if (roomSearch.empty() || CRT::FindSubstring(name, roomSearch))
+							if (ImGui::Selectable(resource.name, selectedRoom.id == resource.id))
+								selectedRoom = resource;
 					}
 				}
 				/* Scripts */
@@ -971,7 +1009,7 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 					if (ImGui::BeginItemTooltip())
 					{
 						ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-						ImGui::TextUnformatted("Something to note: gml_GlobalScripts are executed when the game is launched, and gml_Scripts are the one that are called by code.");
+						ImGui::TextUnformatted("Something to note: gml_GlobalScripts are 99% of the time useless. You may ignore it. The real deal are gml_Scripts.");
 						ImGui::PopTextWrapPos();
 						ImGui::EndTooltip();
 					}
@@ -979,27 +1017,28 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 						ImGui::InsertNotification({ ImGuiToastType::Error, "Not available" });
 					}
 					ImGui::SameLine();
-					if (ImGui::Button("Edit##scripts"))
-						openedManagers |= MANAGERS_CODE;
-					ImGui::SameLine();
-					if (ImGui::Button("Refresh##scripts")) {
-						API::GetScriptList(&rScript.list);
-						API::GetCodeList(&rCode.list);
+					if (ImGui::Button("Edit##scripts")) {
+						codeViewerOpen = true;
 					}
 					ImGui::SameLine();
-					ImGui::InputText("Search##scripts", &rScript.search);
-					for (auto& resource : rScript.list) {
+					if (ImGui::Button("Refresh##scripts")) {
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetScriptList, &ScriptList, NULL, NULL);
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetCodeList, &codeList, NULL, NULL);
+					}
+					ImGui::SameLine();
+					ImGui::InputText("Search##scripts", &scriptSearch);
+					for (auto& resource : ScriptList) {
 						std::string name(resource.name);
-						if (rScript.search.empty() || CRT::FindSubstring(name, rScript.search))
-							if (ImGui::Selectable(resource.name, rScript.selection.id == resource.id))
+						if (scriptSearch.empty() || CRT::FindSubstring(name, scriptSearch))
+							if (ImGui::Selectable(resource.name, selectedScript.id == resource.id))
 							{
-								rScript.selection = resource;
+								selectedScript = resource;
 								std::string str_name(resource.name);
 								if (str_name.rfind("gml_", 0) != 0)
 									str_name = "gml_GlobalScript_" + str_name;
-								for (auto& code : rCode.list) {
+								for (auto& code : codeList) {
 									if (code.name == str_name) {
-										rCode.selection = code;
+										selectedCode = code;
 										break;
 									}
 								}
@@ -1009,24 +1048,24 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 				/* Code */
 				if (ImGui::CollapsingHeader("Code")) {
 					if (ImGui::Button("Edit##code"))
-						openedManagers |= MANAGERS_CODE;
+						codeViewerOpen = true;
 					ImGui::SameLine();
 					if (ImGui::Button("Refresh##code"))
-						API::GetCodeList(&rCode.list);
+						::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetCodeList, &codeList, NULL, NULL);
 					ImGui::SameLine();
-					ImGui::InputText("Search##code", &rCode.search);
-					for (auto& resource : rCode.list) {
+					ImGui::InputText("Search##code", &codeSearch);
+					for (auto& resource : codeList) {
 						std::string name(resource.name);
-						if (rCode.search.empty() || CRT::FindSubstring(name, rCode.search))
-							if (ImGui::Selectable((name + "##code_entry").c_str(), rCode.selection.id == resource.id))
-								rCode.selection = resource;
+						if (codeSearch.empty() || CRT::FindSubstring(name, codeSearch))
+							if (ImGui::Selectable((name + "##code_entry").c_str(), selectedCode.idx == resource.idx))
+								selectedCode = resource;
 					}
 				}
 				ImGui::EndTabItem();
 			}
 
-			if (openedManagers & MANAGERS_CURVES && rCurve.selection.id >= 0) {
-				std::string title = "Animation curve management [" + std::string(rCurve.selection.name) + "]###CurveManager";
+			if (openedManagers & MANAGERS_CURVES && selectedCurve.id >= 0) {
+				std::string title = "Animation curve management [" + std::string(selectedCurve.name) + "]###CurveManager";
 
 				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
 				ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_Once);
@@ -1036,10 +1075,10 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 						openedManagers &= ~MANAGERS_CURVES;
 
 					CAnimCurveManager* manager = API::GetCurveManager();
-					CAnimCurve* curve = manager->children[rCurve.selection.id];
+					CAnimCurve* curve = manager->children[selectedCurve.id];
 					uint64_t curveCount = curve->curve_count;
 					CAnimCurveChannel** channels = curve->curves;
-					if (ImPlot::BeginPlot(rCurve.selection.name)) {
+					if (ImPlot::BeginPlot(selectedCurve.name)) {
 						for (int i = 0; i < curveCount; i++) {
 							CAnimCurveChannel* channel = channels[i];
 							uint64_t point_count = channel->curve_point_count;
@@ -1075,8 +1114,8 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 				ImGui::End();
 			}
 
-			if (openedManagers & MANAGERS_OBJECTS && rObject.selection.id >= 0) {
-				std::string title = "Object management [" + std::string(rObject.selection.name) + "]###ObjectManager";
+			if (openedManagers & MANAGERS_OBJECTS && selectedObj.id >= 0) {
+				std::string title = "Object management [" + std::string(selectedObj.name) + "]###ObjectManager";
 
 				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
 				ImGui::Begin(title.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize);
@@ -1086,17 +1125,17 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 					if (ImGui::BeginTabBar("##objManagerTabs", ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | ImGuiTabBarFlags_FittingPolicyResizeDown)) {
 						if (ImGui::BeginTabItem("General##objManager")) {
 							if (ImGui::Button("Spawn"))
-								PARSER::ExecuteCode(std::format("instance_create_layer(0, 0, 0, {});", rObject.selection.id));
+								PARSER::ExecuteCode(std::format("instance_create_layer(0, 0, 0, {});", selectedObj.id));
 							ImGui::SameLine();
 
 							if (ImGui::Button("Destroy"))
-								PARSER::ExecuteCode(std::format("instance_destroy({});", rObject.selection.id));
+								PARSER::ExecuteCode(std::format("instance_destroy({});", selectedObj.id));
 
-							if (rRoom.selection.id >= 0) {
+							if (selectedRoom.id >= 0) {
 								ImGui::SameLine();
-								std::string label = "Spawn in " + std::string(rRoom.selection.name) + "###SpawnObjectRoom";
+								std::string label = "Spawn in " + std::string(selectedRoom.name) + "###SpawnObjectRoom";
 								if (ImGui::Button(label.c_str()))
-									PARSER::ExecuteCode(std::format("room_instance_add({}, 0, 0, {});", rRoom.selection.id, rObject.selection.id));
+									PARSER::ExecuteCode(std::format("room_instance_add({}, 0, 0, {});", selectedRoom.id, selectedObj.id));
 							}
 							ImGui::EndTabItem();
 						}
@@ -1104,7 +1143,7 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 							if (ImGui::BeginListBox("Variables##object")) {
 								for (auto& var : ObjectVariables) {
 									if (ImGui::Selectable(var.c_str(), SelectedVariable == var)) {
-										RValue val = API::GetCodeVariable(CRT::PreserveString(var.c_str()), rObject.selection.id);
+										RValue val = API::GetCodeVariable(CRT::PreserveString(var.c_str()), selectedObj.id);
 										SelectedVariableValue = API::RValueToString(val);
 										SelectedVariable = var;
 									}
@@ -1113,41 +1152,41 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 							}
 							ImGui::SameLine();
 							if (ImGui::Button("Refresh##obj_vars"))
-								ObjectVariables = API::GetObjectVariables(rObject.selection.id);
+								ObjectVariables = API::GetObjectVariables(selectedObj.id);
 							if (!SelectedVariable.empty())
 							{
 								ImGui::InputText("Value##obj_var", &SelectedVariableValue);
 								if (ImGui::Button("Set##obj_var")) {
-									API::SetCodeVariable(rObject.selection.id, SelectedVariable, SelectedVariableValue);
+									API::SetCodeVariable(selectedObj.id, SelectedVariable, SelectedVariableValue);
 								}
 							}
 							ImGui::EndTabItem();
 						}
 						if (ImGui::BeginTabItem("Code##objManager")) {
-							CObjectGM* obj = API::GetObjectById(rObject.selection.id);
+							CObjectGM* obj = API::GetObjectById(selectedObj.id);
 							if (ImGui::BeginListBox("##eventlist")) {
 								std::string match("gml_Object_");
-								match += rObject.selection.name;
+								match += selectedObj.name;
 								match += "_";
-								for (const auto& code : rCode.list) {
-									if (std::string(code.name).rfind(match, 0) == 0 && (rCode.search.empty() || CRT::FindSubstring(code.name, rCode.search))) {
-										if (ImGui::Selectable(code.name, rCode.selection.id == code.id))
-											rCode.selection = code;
+								for (const auto& code : codeList) {
+									if (code.name.rfind(match, 0) == 0 && (codeSearch.empty() || CRT::FindSubstring(code.name, codeSearch))) {
+										if (ImGui::Selectable(code.name.c_str(), selectedCode.idx == code.idx))
+											selectedCode = code;
 									}
 								}
 								ImGui::EndListBox();
 							}
 							ImGui::SameLine();
 							if (ImGui::Button("Refresh##objCode"))
-								API::GetCodeList(&rCode.list);
-							ImGui::InputText("Search##objCode", &rCode.search);
-							if (rCode.selection.id >= 0)
+								::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetCodeList, &codeList, NULL, NULL);
+							ImGui::InputText("Search##objCode", &codeSearch);
+							if (selectedCode.idx >= 0)
 								if (ImGui::Button("Edit in code manager"))
-									openedManagers |= MANAGERS_CODE;
+									codeViewerOpen = true;
 							ImGui::EndTabItem();
 						}
 						if (ImGui::BeginTabItem("Properties##objManager")) {
-							CObjectGM* obj = API::GetObjectById(rObject.selection.id);
+							CObjectGM* obj = API::GetObjectById(selectedObj.id);
 							static bool showEditDialog = false;
 							static char* name = new char[MAX_PATH + 1];
 							static int idx{};
@@ -1157,7 +1196,10 @@ RAM Usage: {} MB)"""", __DATE__, __TIME__, io.DeltaTime, io.Framerate, RAMUsage)
 								ImGui::SameLine();
 								if (ImGui::Button("Set##nameobjEditor")) {
 									obj->m_Name = CRT::PreserveString(name);
-									rObject.selection.name = CRT::PreserveString(name);
+									size_t new_name_length = CRT::StringLength(obj->m_Name);
+									selectedObj.name = new char[new_name_length + 1];
+									CRT::StringCopy(selectedObj.name, obj->m_Name);
+									selectedObj.name[new_name_length] = '\0';
 								}
 								ImGui::InputInt("Sprite index##objEditor", &idx);
 								ImGui::SameLine();
@@ -1209,8 +1251,8 @@ obj->m_ID);
 				ImGui::End();
 			}
 
-			if (openedManagers & MANAGERS_ROOMS && rRoom.selection.id >= 0) {
-				std::string title = "Room management [" + std::string(rRoom.selection.name) + "]###RoomManager";
+			if (openedManagers & MANAGERS_ROOMS && selectedRoom.id >= 0) {
+				std::string title = "Room management [" + std::string(selectedRoom.name) + "]###RoomManager";
 
 				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
 				ImGui::Begin(title.c_str());
@@ -1218,7 +1260,7 @@ obj->m_ID);
 					if (ImGui::Button("Close##roomManager"))
 						openedManagers &= ~MANAGERS_ROOMS;
 					if (ImGui::Button("Go to room"))
-						PARSER::ExecuteCode(std::format("room_goto({});", rRoom.selection.id));
+						PARSER::ExecuteCode(std::format("room_goto({});", selectedRoom.id));
 					ImGui::SameLine();
 
 					if (ImGui::Button("Go to next room"))
@@ -1230,17 +1272,17 @@ obj->m_ID);
 					ImGui::SameLine();
 
 					if (ImGui::Button("Duplicate room"))
-						PARSER::ExecuteCode(std::format("room_duplicate({});", rRoom.selection.id));
+						PARSER::ExecuteCode(std::format("room_duplicate({});", selectedRoom.id));
 					ImGui::SameLine();
 
 					if (ImGui::Button("Clear##rooms"))
-						PARSER::ExecuteCode(std::format("room_instance_clear({});", rRoom.selection.id));
+						PARSER::ExecuteCode(std::format("room_instance_clear({});", selectedRoom.id));
 				}
 				ImGui::End();
 			}
 
-			if (openedManagers & MANAGERS_PATHS && rPath.selection.id >= 0) {
-				std::string title = "Path management [" + std::string(rPath.selection.name) + "]###PathManager";
+			if (openedManagers & MANAGERS_PATHS && selectedPath.id >= 0) {
+				std::string title = "Path management [" + std::string(selectedPath.name) + "]###PathManager";
 
 				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
 				ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_Once);
@@ -1250,9 +1292,9 @@ obj->m_ID);
 						openedManagers &= ~MANAGERS_PATHS;
 
 					Path_Main* path_main = API::GetPathMain();
-					CPath* path = path_main->children[rPath.selection.id];
+					CPath* path = path_main->children[selectedPath.id];
 					uint64_t points = path->length;
-					if (ImPlot::BeginPlot(rPath.selection.name)) {
+					if (ImPlot::BeginPlot(selectedPath.name)) {
 						float* x_data = new float[points];
 						float* y_data = new float[points];
 						for (int i = 0; i < points; i++) {
@@ -1260,7 +1302,7 @@ obj->m_ID);
 							x_data[i] = point.x;
 							y_data[i] = point.y;
 						}
-						ImPlot::PlotLine(rPath.selection.name, x_data, y_data, points);
+						ImPlot::PlotLine(selectedPath.name, x_data, y_data, points);
 						ImPlot::EndPlot();
 					}
 
@@ -1296,7 +1338,7 @@ obj->m_ID);
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Refresh##globals"))
-					API::GetGlobalVariables(&g_Variables);
+					::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)API::GetGlobalVariables, &g_Variables, NULL, NULL);
 
 				ImGui::InputText("Search##globals", &g_VarSearch);
 				ImGui::InputText("Value##globals", &Selectedg_VarValue);
@@ -1367,15 +1409,12 @@ obj->m_ID);
 
 	ImGui::End();
 
-	if (openedManagers & MANAGERS_CODE && rCode.selection.id >= 0) {
-		std::string title = "Code viewer [" + std::string(rCode.selection.name) + "]###CodeViewer";
-		ImGui::Begin(title.c_str());
+	if (codeViewerOpen && selectedCode.idx >= 0) {
+		std::string title = "Code viewer [" + selectedCode.name + "]###CodeViewer";
+		ImGui::Begin(title.c_str(), &codeViewerOpen);
 		{
-			if (ImGui::Button("Close##CodeViewer"))
-				openedManagers &= ~MANAGERS_CODE;
-			static bool bSendDisasm = false;
-			static HANDLE hDecompThread = nullptr;
-			static HANDLE hTranspileThread = nullptr;
+			static bool send_dis = false;
+			static HANDLE decompThread = nullptr;
 			if (ImGui::BeginTabBar("##codeviewer_tabs")) {
 				if (ImGui::BeginTabItem("Decompilation##code_viewer"))
 				{
@@ -1383,9 +1422,22 @@ obj->m_ID);
 						currentDisasm = "; Disassembly START!\n";
 						currentCode = "// Decompilation START!\n";
 						SLLVMVars* vars = API::GetVariables();
-						std::uint8_t* func = reinterpret_cast<std::uint8_t*>(vars->pGMLFuncs[rCode.selection.id].pFunc);
+						std::uint8_t* func = reinterpret_cast<std::uint8_t*>(vars->pGMLFuncs[selectedCode.idx].pFunc);
 						const auto& assembly = REMOTE::DisassembleFn(func);
 						for (const auto& inst : assembly) {
+							/*
+							* Cheat Sheet START!
+							* ---
+							* How to get CALL function address (e.g. - call [0x00007FF614CB75FD]):
+							* inst.runtime_address + inst.info.length + inst.info.raw.imm[0].value.u
+							* If it's call [rax+0x10] for e.g.,
+							* inst.info.raw.disp.value = offset
+							* TODO: Research better
+							* ---
+							* How to get lea/mov address (e.g. - lea rax, [0x00007FF614CB75FD] ; e.g. - mov [0x00007FF75E1C812D], rax):
+							* inst.runtime_address + inst.info.length + inst.info.raw.disp.value
+							* ---
+							*/
 							std::string result = CRT::LongToHexString(inst.runtime_address);
 							std::string asm_inst(inst.text);
 							if (inst.info.mnemonic == ZYDIS_MNEMONIC_CALL) {
@@ -1397,41 +1449,23 @@ obj->m_ID);
 							currentDisasm += asm_inst + "\t ; " + result + '\n';
 							currentCode += "__asm " + asm_inst + " // " + result + '\n';
 						}
-						if (bSendDisasm) {
+						if (send_dis) {
 							currentCode = "// Decompilation START!\n";
 							void** threadInfo = new void* [2] {
-								reinterpret_cast<void*>(vars->pGMLFuncs[rCode.selection.id].pFunc),
+								reinterpret_cast<void*>(vars->pGMLFuncs[selectedCode.idx].pFunc),
 								reinterpret_cast<void*>(&currentCode)
 							};
-							hDecompThread = ::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)REMOTE::DecompileFn, threadInfo, NULL, NULL);
-							if (YY_ISINVALIDPTR(hDecompThread))
+							decompThread = ::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)REMOTE::DecompileFn, threadInfo, NULL, NULL);
+							if (YY_ISINVALIDPTR(decompThread))
 								ImGui::InsertNotification({ ImGuiToastType::Error, "Failed to create a new thread. Thread handle given by ::CreateThread is invalid." });
 						}
-
-						DecompilerInput* input = new DecompilerInput();
-						input->pName = vars->pGMLFuncs[rCode.selection.id].pName;
-						input->pFunc = func;
-						input->nFlags |= DecompilerFlags::FLAGS_ACCURACY;
-						DecompilerResult* result = DECOMPILER::DecompileFn(input); // TODO: Make this multi-threaded, or optimize and make it faster
-						if (result->bSuccess)
-						{
-							currentTranspiled = std::format(R"(// Lines of code: {}
-// {}
-function {}() {{
-{}
-}})", result->nLines, YY_ISINVALIDPTR(result->pStatus) ? "No additional information available." : result->pStatus, input->pName, result->strCode);
-						} else
-							ImGui::InsertNotification({ ImGuiToastType::Error, "Failed to transpile machine to GML code. Check the debug console for more information." });
-						
-						delete input;
-						delete result;
 					}
-					if (hDecompThread) {
-						DWORD waitResult = WaitForSingleObject(hDecompThread, 0);
+					if (decompThread) {
+						DWORD waitResult = WaitForSingleObject(decompThread, 0);
 						switch (waitResult) {
 						case WAIT_OBJECT_0:
-							CloseHandle(hDecompThread);
-							hDecompThread = nullptr;
+							CloseHandle(decompThread);
+							decompThread = nullptr;
 							ImGui::InsertNotification({ ImGuiToastType::Success, "Decompilation finished." });
 							break;
 						case WAIT_TIMEOUT:
@@ -1442,8 +1476,8 @@ function {}() {{
 							ImGui::End();
 							break;
 						default:
-							CloseHandle(hDecompThread);
-							hDecompThread = nullptr;
+							CloseHandle(decompThread);
+							decompThread = nullptr;
 							ImGui::InsertNotification({ ImGuiToastType::Error });
 							break;
 						}
@@ -1452,7 +1486,7 @@ function {}() {{
 					ImGui::SameLine();
 					if (ImGui::Button("Execute##disasm")) {
 						SLLVMVars* vars = API::GetVariables();
-						std::uint8_t* func = reinterpret_cast<std::uint8_t*>(vars->pGMLFuncs[rCode.selection.id].pFunc);
+						std::uint8_t* func = reinterpret_cast<std::uint8_t*>(vars->pGMLFuncs[selectedCode.idx].pFunc);
 						std::vector<unsigned char> bytes = REMOTE::GetBytes(func);
 						const auto allocated = ::VirtualAlloc(NULL, bytes.size(), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 						if (YY_ISINVALIDPTR(allocated))
@@ -1463,18 +1497,17 @@ function {}() {{
 							::VirtualProtect(allocated, bytes.size(), PAGE_EXECUTE_READ, &disposable);
 							using fOriginal = void __fastcall(CInstance* pSelf, CInstance* pOther);
 							auto oOriginal = reinterpret_cast<fOriginal*>(allocated);
-							CInstance* pSelf = API::GetObjectInstanceFromId(rObject.selection.id);
+							CInstance* pSelf = API::GetObjectInstanceFromId(selectedObj.id);
 							oOriginal(pSelf, nullptr);
 							::VirtualFree(allocated, 0, MEM_RELEASE);
 						}
 					}
 					ImGui::InputTextMultiline("Decompiled##code", &currentCode);
-					ImGui::InputTextMultiline("Transpiled##code", &currentTranspiled);
 					ImGui::Text("note: proper decompilation of code requires the assembly to be uploaded to my servers,");
 					ImGui::Text("where it will be properly decompiled into c++ and sent back for display/transpiling.");
 					ImGui::Text("by checking the box below, you acknowledge that the disassembly, including the");
 					ImGui::Text("decompiled code, may be viewed by a third party.*");
-					ImGui::Checkbox("Send the disassembly to remote server for decompilation", &bSendDisasm);
+					ImGui::Checkbox("Send the disassembly to remote server for decompilation", &send_dis);
 					ImGui::Text("* I keep no logs. By third party, in a really edge case, law enforcement is implied.");
 
 					ImGui::EndTabItem();
@@ -1489,7 +1522,7 @@ function {}() {{
 					ImGui::Combo("Execution order##code_viewer_editor", &execOrder, "Only execute hook\0Execute original code before hook\0Execute original code after hook");
 					if (ImGui::Button("Hook!##code_viewer_editor")) {
 						SLLVMVars* vars = API::GetVariables();
-						bool result = H::AddUniversalHook(vars->pGMLFuncs[rCode.selection.id].pFunc, editInputText, isLua, execOrder, rCode.selection.name);
+						bool result = H::AddUniversalHook(vars->pGMLFuncs[selectedCode.idx].pFunc, editInputText, isLua, execOrder, selectedCode.name);
 						if (result)
 							ImGui::InsertNotification({ ImGuiToastType::Success, "Successfully overwritten execution instructions" });
 						else
@@ -1498,7 +1531,7 @@ function {}() {{
 					ImGui::SameLine();
 					if (ImGui::Button("Restore hook##code_viewer_editor")) {
 						SLLVMVars* vars = API::GetVariables();
-						bool result = H::RemoveUniversalHook(vars->pGMLFuncs[rCode.selection.id].pFunc, rCode.selection.name);
+						bool result = H::RemoveUniversalHook(vars->pGMLFuncs[selectedCode.idx].pFunc, selectedCode.name);
 						if (result)
 							ImGui::InsertNotification({ ImGuiToastType::Success, "Successfully restored execution instructions" });
 						else

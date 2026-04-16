@@ -8,7 +8,7 @@
 
 int API::GetResourceIdByName(const char* name, int* type) {
 	using fOriginal = int __fastcall(const char*, int*);
-	auto oOriginal = reinterpret_cast<fOriginal*>(MEM::GetAbsoluteAddress(MEM::PatternScan(nullptr, "E8 ? ? ? ? 85 C0 78 ? 48 63 4C 24"), 0x1));
+	auto oOriginal = reinterpret_cast<fOriginal*>(MEM::PatternScan(nullptr, "48 89 5C 24 ? 57 48 83 EC ? 48 8B DA 48 8B F9 E8 ? ? ? ? 85 C0"));
 	int disposable = 0;
 	if (YY_ISINVALIDPTR(type))
 		return oOriginal(name, &disposable);
@@ -79,7 +79,7 @@ RValue API::GetBuiltInVariable(const char* name) {
 
 int API::GetVarSlotFromName(const char* name) {
 	using fOriginal = unsigned int __fastcall(void*, const char*);
-	auto oOriginal = reinterpret_cast<fOriginal*>(MEM::GetAbsoluteAddress(MEM::PatternScan(nullptr, "E8 ? ? ? ? 4C 8B 55 ? 83 F8"), 0x1));
+	auto oOriginal = reinterpret_cast<fOriginal*>(MEM::PatternScan(nullptr, "48 83 EC ? 48 8B 0D ? ? ? ? E8 ? ? ? ? 48 85 C0"));
 	return oOriginal(nullptr, name);
 }
 
@@ -200,7 +200,7 @@ SLLVMVars* API::GetVariables() {
 }
 
 bool* API::IsGameNotSandboxed() {
-	return reinterpret_cast<bool*>(MEM::GetAbsoluteAddress(MEM::PatternScan(nullptr, "44 38 25 ? ? ? ? 75"), 0x3));
+	return reinterpret_cast<bool*>(MEM::GetAbsoluteAddress(MEM::PatternScan(nullptr, "88 05 ? ? ? ? 8B 7B"), 0x2));
 }
 
 const char* API::GetVariableNameById(__int64 obj, int id) {
@@ -256,14 +256,15 @@ RValue API::GetGlobalValue(std::string var_name) {
 	return RValue(0);
 }
 
-void API::GetCodeList(std::vector<UI::ResourceItem>* funcs) {
+void API::GetCodeList(std::vector<UI::CodeItem>* funcs) {
 	funcs->clear();
 	SLLVMVars* vars = GetVariables();
 	int size = vars->nYYCode;
 	for (unsigned int i = 0; i < size; i++) {
-		UI::ResourceItem item{};
-		item.name = CRT::PreserveString(vars->pGMLFuncs[i].pName);
-		item.id = i;
+		std::string name(vars->pGMLFuncs[i].pName);
+		UI::CodeItem item{};
+		item.name = name;
+		item.idx = i;
 		funcs->push_back(item);
 	}
 }
@@ -271,11 +272,14 @@ void API::GetCodeList(std::vector<UI::ResourceItem>* funcs) {
 void API::GetResourceList(std::vector<UI::ResourceItem>* items, int type) {
 	items->clear();
 	for (int i = 0; i < 10000000; i++) {
-		char* name = (char*)GetResourceNameById(i, type);
+		const char* name = GetResourceNameById(i, type);
 		if (YY_ISINVALIDPTR(name))
 			break;
 		UI::ResourceItem resource{};
-		resource.name = CRT::PreserveString(name);
+		size_t name_length = CRT::StringLength(name);
+		resource.name = new char[name_length + 1];
+		CRT::StringCopy(resource.name, name);
+		resource.name[name_length] = '\0';
 		resource.id = i;
 		items->push_back(resource);
 	}
@@ -308,7 +312,12 @@ void API::GetObjectList(std::vector<UI::ResourceItem>* items) {
 			if (m_pObj->m_Name && strncmp(m_pObj->m_Name, "__YYInternalObject__", 0x14ui64))
 			{
 				UI::ResourceItem resource{};
-				resource.name = CRT::PreserveString(m_pObj->m_Name);
+
+				size_t name_length = CRT::StringLength(m_pObj->m_Name);
+				resource.name = new char[name_length + 1];
+				CRT::StringCopy(resource.name, m_pObj->m_Name);
+				resource.name[name_length] = '\0';
+
 				resource.id = m_pObj->m_ID;
 				items->push_back(resource);
 			}
@@ -374,7 +383,10 @@ void API::GetPathList(std::vector<UI::ResourceItem>* items) {
 			continue;
 
 		UI::ResourceItem resource{};
-		resource.name = CRT::PreserveString(name);
+		size_t name_length = CRT::StringLength(name);
+		resource.name = new char[name_length + 1];
+		CRT::StringCopy(resource.name, name);
+		resource.name[name_length] = '\0';
 		resource.id = i;
 		items->push_back(resource);
 	}
@@ -391,7 +403,10 @@ void API::GetCurveList(std::vector<UI::ResourceItem>* items) {
 		if (YY_ISINVALIDPTR(inst))
 			continue;
 		UI::ResourceItem resource{};
-		resource.name = CRT::PreserveString(inst->asset_name);
+		size_t name_length = CRT::StringLength(inst->asset_name);
+		resource.name = new char[name_length + 1];
+		CRT::StringCopy(resource.name, inst->asset_name);
+		resource.name[name_length] = '\0';
 		resource.id = i;
 		items->push_back(resource);
 	}
@@ -411,7 +426,10 @@ void API::GetScriptList(std::vector<UI::ResourceItem>* items) {
 			continue;
 
 		UI::ResourceItem resource{};
-		resource.name = CRT::PreserveString(name);
+		size_t name_length = CRT::StringLength(name);
+		resource.name = new char[name_length + 1];
+		CRT::StringCopy(resource.name, name);
+		resource.name[name_length] = '\0';
 		resource.id = i;
 		items->push_back(resource);
 	}

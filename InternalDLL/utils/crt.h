@@ -199,7 +199,7 @@ namespace CRT
 	}
 	[[nodiscard]] __forceinline std::string LongToHexString(std::uint64_t in) {
 		std::stringstream stream;
-		stream << std::uppercase << std::hex << in;
+		stream << std::hex << in;
 		std::string result("0x" + stream.str());
 		return result;
 	}
@@ -396,6 +396,11 @@ namespace CRT
 		return pDestination;
 	}
 
+	__forceinline const char* PreserveString(const char* src_str) noexcept {
+		char* new_str = new char[std::strlen(src_str) + 1];
+		std::strcpy(new_str, src_str);
+		return new_str;
+	}
 #pragma endregion
 
 	/*
@@ -760,11 +765,6 @@ namespace CRT
 		return tszDestination;
 	}
 
-	__forceinline char* PreserveString(const char* src_str) noexcept {
-		char* new_str = new char[StringLength(src_str) + 1];
-		StringCopy(new_str, src_str);
-		return new_str;
-	}
 #pragma endregion
 
 	/*

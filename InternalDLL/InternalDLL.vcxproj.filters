@@ -79,10 +79,6 @@
     <ClCompile Include="utils\GMLParser.cpp">
       <Filter>utils</Filter>
     </ClCompile>
-    <ClCompile Include="utils\RemoteAPI.cpp">
-      <Filter>utils</Filter>
-    </ClCompile>
-    <ClCompile Include="utils\code\decompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Drawing.h" />
@@ -317,9 +313,6 @@
     <ClInclude Include="dependencies\LuaBridge\detail\Userdata.h">
       <Filter>dependencies\LuaBridge\detail</Filter>
     </ClInclude>
-    <ClInclude Include="utils\code\decompiler.h">
-      <Filter>utils\code</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="dependencies">
@@ -360,9 +353,6 @@
     </Filter>
     <Filter Include="dependencies\LuaBridge\detail">
       <UniqueIdentifier>{08d0f5ff-87ea-467b-817c-5e9c33bdbe48}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="utils\code">
-      <UniqueIdentifier>{c81fd0a2-90ca-4a29-aed5-08bcb4241944}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

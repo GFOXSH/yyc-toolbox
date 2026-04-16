@@ -44,7 +44,7 @@ std::unordered_map<std::string, std::uint8_t*> patterns{};
      *
      * @Returns Address of the first occurence
 */
-std::uint8_t* MEM::PatternScan(const char* modName, const char* signature, bool ignoreIfInvalid)
+std::uint8_t* MEM::PatternScan(const char* modName, const char* signature)
 {
     std::string search(signature);
     decltype(patterns)::iterator it = patterns.find(search);
@@ -100,11 +100,8 @@ std::uint8_t* MEM::PatternScan(const char* modName, const char* signature, bool 
             return &scanBytes[i];
         }
     }
-
-    if (!ignoreIfInvalid) {
-        std::string error_msg = std::format("COULD NOT FIND SIGNATURE!\nThis will most likely lead to a crash.\nPlease report this and attach the game along with this error message.\nPress CTRL + C on this error to copy it.\nsig {} / modname {} / compile date {} / time {}", search, modName == nullptr ? "nullptr" : modName, __DATE__, __TIME__);
-        MessageBoxA(NULL, error_msg.c_str(), "YYC Toolbox - whoops!", MB_OK | MB_ICONERROR);
-    }
+    std::string error_msg = std::format("COULD NOT FIND SIGNATURE!\nThis will most likely lead to a crash.\nPlease report this and attach the game along with this error message.\nPress CTRL + C on this error to copy it.\nsig {} / modname {} / compile date {} / time {}", search, modName == nullptr ? "nullptr" : modName, __DATE__, __TIME__);
+    MessageBoxA(NULL, error_msg.c_str(), "YYC Toolbox - whoops!", MB_OK | MB_ICONERROR);
     L_PRINT(LOG_ERROR) << "Invalid signature. Could not find anything.";
     return nullptr;
 }
@@ -113,7 +110,7 @@ void* MEM::GetModuleBaseHandle(const char* szModuleName) {
     char moduleName[MAX_PATH]{};
     if (!szModuleName) {
         TCHAR szFileName[MAX_PATH];
-        GetModuleFileNameW(NULL, szFileName, MAX_PATH);
+        GetModuleFileName(NULL, szFileName, MAX_PATH);
         wcstombs(moduleName, szFileName, MAX_PATH);
         std::filesystem::path p(moduleName);
         strcpy(moduleName, p.filename().string().c_str());

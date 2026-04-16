@@ -26,7 +26,7 @@
 #include <string>
 
 namespace MEM {
-	std::uint8_t* PatternScan(const char* modName, const char* signature, bool ignoreIfInvalid = false);
+	std::uint8_t* PatternScan(const char* moduleName, const char* signature);
 	void* GetModuleBaseHandle(const char* szModuleName);
 	void* GetModuleBaseHandle(const wchar_t* wszModuleName);
 

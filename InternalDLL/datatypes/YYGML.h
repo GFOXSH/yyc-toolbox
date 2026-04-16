@@ -819,7 +819,7 @@ struct YYObjectBase : CInstanceBase
 	YYObjectBase* m_Flink;
 	YYObjectBase* m_Blink;
 	YYObjectBase* m_Prototype;
-	char* m_Class;
+	const char* m_Class;
 	FNGetOwnProperty m_GetOwnProperty;
 	FNDeleteProperty m_DeleteProperty;
 	FNDefineOwnProperty m_DefineOwnProperty;
@@ -887,7 +887,7 @@ public:
 typedef	void(*PFUNC_YYGML)(CInstance* _pSelf, CInstance* _pOther);
 struct YYGMLFuncs
 {
-	char* pName;
+	const char* pName;
 	PFUNC_YYGML pFunc;
 	YYVAR* pFuncVar;
 };
@@ -957,7 +957,7 @@ struct LinkedList
 
 struct CObjectGM
 {
-	char* m_Name;
+	const char* m_Name;
 	CObjectGM* m_ParentObject;
 	CHashMap<int, CObjectGM*, 2>* m_ChildrenMap;
 	CHashMap<int, CEvent*, 3>* m_EventsMap;
@@ -3240,7 +3240,7 @@ FORCEINLINE int NOTHROW_ATTR YYGML_array_length(const YYRValue& _arg0)
 // This function routes any unknown functions to the correct destination
 static YYRValue& YYGML_CallLegacyFunction(CInstance* _pSelf, CInstance* _pOther, YYRValue& _result, int _argc, int _id, YYRValue** _args) {
 	// Basically rebuilt?
-	std::uint8_t* xref = MEM::PatternScan(nullptr, "48 8B 05 ? ? ? ? C7 47", true);
+	std::uint8_t* xref = MEM::PatternScan(nullptr, "48 8B 05 ? ? ? ? C7 47");
 	if (xref == nullptr)
 	{
 		using fOriginal = YYRValue & __fastcall(CInstance*, CInstance*, YYRValue&, int, int, YYRValue**);
