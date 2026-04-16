@@ -2,38 +2,18 @@ name: Build YYC Toolbox
 
 on: [push, pull_request]
 
-env:
-  SOLUTION_PATH: InternalDLL.sln
-  CONFIGURATION: Release
-  PLATFORM: x64   # можно собрать и x86, добавив матрицу
-
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Setup vcpkg
         run: |
-          git clone https://github.com/Microsoft/vcpkg.git
-          .\vcpkg\bootstrap-vcpkg.bat
-          .\vcpkg\vcpkg integrate install
-          .\vcpkg\vcpkg install lua:x86-windows lua:x64-windows
-
-      - name: Set environment variables for build
-        shell: cmd
-        run: |
-          echo "LUALIB_DIR=C:\vcpkg\installed\%PLATFORM%\lib" >> %GITHUB_ENV%
-          echo "DXSDK_DIR=C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" >> %GITHUB_ENV%
-        # Вместо жесткого пути к Windows Kits можно вообще убрать DXSDK_DIR, используя d3d11.lib без пути
-
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg integrate install
+          C:\vcpkg\vcpkg install lua:x64-windows
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
-
-      - name: Restore NuGet packages (если есть)
-        run: nuget restore ${{ env.SOLUTION_PATH }}
-
-      - name: Build solution
-        run: msbuild ${{ env.SOLUTION_PATH }} /p:Configuration=${{ env.CONFIGURATION }} /p:Platform=${{ env.PLATFORM }} /p:VcpkgEnabled=true
+      - name: Build
+        run: msbuild InternalDLL.sln /p:Configuration=Release /p:Platform=x64 /p:VcpkgEnabled=true /p:VcpkgRoot=C:\vcpkg\
