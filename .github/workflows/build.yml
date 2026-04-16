@@ -33,7 +33,7 @@ jobs:
     - name: Build the solution
       # В проектах C++ 32-битная архитектура традиционно называется Win32.
       # Если ваша Visual Studio настроена на x86, замените Win32 на x86.
-      run: msbuild InternalDLL.sln /p:Configuration=Release /p:Platform=Win32
+      run: msbuild InternalDLL.sln /p:Configuration=Release /p:Platform=x86
 
     - name: Upload compiled DLL
       uses: actions/upload-artifact@v4
